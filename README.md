@@ -136,12 +136,15 @@ gunicorn==21.2.0
 ```
 
 🔗 在线演示
-平台	          地址
-PythonAnywhere	https://liang233.pythonanywhere.com
+| 平台 | 地址 |
+|------|------|
+| PythonAnywhere | https://liang233.pythonanywhere.com|
 
 📝 注意事项
+```bash
 ⚠️ 搜索功能
 部署到云端后，由于番茄小说API限制，搜索功能可能不可用。推荐在本地添加书籍后，通过「导出/导入」功能同步数据到云端。
+```
 
 🖼️ 封面图片
 封面图片会自动下载到 static/covers/ 目录，首次加载可能需要稍等片刻。
