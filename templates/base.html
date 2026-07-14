@@ -5,6 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}" type="image/png">
     <title>{% block title %}我的小说推荐{% endblock %}</title>
+
+    <!-- SEO -->
+    <meta name="description" content="我的私人书单 - 记录和推荐读过的好书，包含小说评分、推荐语和阅读进度">
+    <meta name="keywords" content="小说推荐,书单,阅读,番茄小说,好书推荐">
+    <meta name="author" content="liang-yuan-yuan">
+    <meta property="og:title" content="我的私人书单">
+    <meta property="og:description" content="记录和推荐读过的好书">
+    <meta property="og:type" content="website">
+    <meta name="robots" content="index, follow">
+
+    <!-- 百度统计（替换成你的ID） -->
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?你的百度统计ID";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
@@ -82,16 +103,6 @@
         }
     </style>
     {% block head %}{% endblock %}
-    <!-- 百度统计 -->
-    <script>
-        var _hmt = _hmt || [];
-        (function() {
-            var hm = document.createElement("script");
-            hm.src = "https://hm.baidu.com/hm.js?你的百度统计ID";
-            var s = document.getElementsByTagName("script")[0];
-            s.parentNode.insertBefore(hm, s);
-        })();
-    </script>
 </head>
 <body>
 
@@ -103,7 +114,7 @@
         </div>
     </div>
 
-    <!-- 导航栏 - 移动端折叠 -->
+    <!-- 导航栏 -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="/">

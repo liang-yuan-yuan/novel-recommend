@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, send_file, abort, jsonify, Response, session
+from flask_caching import Cache
 from models import db, Novel
 import requests
 import io
@@ -14,6 +15,9 @@ app.secret_key = 'your-secret-key-here-change-in-production'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///novels.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
+
+# ===== 缓存配置 =====
+cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
 # ===== 分类颜色配置 =====
 CATEGORY_COLORS = {
@@ -66,6 +70,26 @@ def from_json_filter(json_str):
         return json.loads(json_str)
     except:
         return []
+
+
+# ===== 错误处理 =====
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+
+@app.errorhandler(500)
+def internal_error(e):
+    db.session.rollback()
+    return render_template('500.html'), 500
+
+
+# ===== 静态文件缓存 =====
+@app.after_request
+def add_header(response):
+    if 'static' in request.path:
+        response.headers['Cache-Control'] = 'public, max-age=86400'
+    return response
 
 
 # ===== 导出书单 =====
@@ -273,6 +297,7 @@ with app.app_context():
 
 # ===== 首页 =====
 @app.route('/')
+@cache.cached(timeout=300)
 def index():
     sort = request.args.get('sort', 'latest')
     rating_filter = request.args.get('rating', 'all')
@@ -309,7 +334,6 @@ def index():
     if not featured_novels:
         featured_novels = novels[:4] if novels else []
 
-    # 今日推荐
     today_recommendation = None
     if novels:
         custom_id = session.get('custom_today')
@@ -560,7 +584,6 @@ def get_cover():
 # ===== 更新评分 =====
 @app.route('/update_ratings')
 def update_ratings():
-    """更新所有书籍的评分"""
     novels = Novel.query.all()
     updated = 0
     for novel in novels:
@@ -662,7 +685,6 @@ def add_from_tomato():
     want_to_read = True if list_type == 'want' else False
     list_name = "想看" if list_type == 'want' else "已读推荐"
 
-    # 创建时记录初始评分历史
     rating_history = json.dumps([{
         'date': datetime.now().strftime('%Y-%m-%d'),
         'rating': book_data['score']
