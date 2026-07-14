@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}{{ novel.title }} - 我的小说推荐{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- 左侧：封面图 -->
+    <div class="col-md-4">
+        <img src="{{ url_for('get_cover', url=novel.cover) }}"
+             class="img-fluid rounded shadow"
+             alt="{{ novel.title }}">
+    </div>
+
+    <!-- 右侧：书籍信息 -->
+    <div class="col-md-8">
+        <h1 class="display-5">{{ novel.title }}</h1>
+
+        <p class="text-muted">
+            <i class="bi bi-person"></i> {{ novel.author }}
+            <span class="badge bg-secondary ms-2">{{ novel.category }}</span>
+            {% if novel.platform %}
+                {% if novel.platform == '番茄小说' %}
+                    <span class="badge bg-danger ms-1">
+                        <i class="bi bi-tomato"></i> 番茄小说
+                    </span>
+                {% elif novel.platform == '晋江文学城' %}
+                    <span class="badge bg-info ms-1">
+                        <i class="bi bi-book"></i> 晋江文学城
+                    </span>
+                {% else %}
+                    <span class="badge bg-primary ms-1">{{ novel.platform }}</span>
+                {% endif %}
+            {% endif %}
+            {% if novel.want_to_read %}
+                <span class="badge bg-info ms-1">
+                    <i class="bi bi-eye"></i> 想看
+                </span>
+            {% endif %}
+        </p>
+
+        <div class="mb-3">
+            <span class="text-warning fs-4">
+                {{ novel.rating|stars|safe }}
+            </span>
+            <span class="fs-5">{{ novel.rating }}/10</span>
+        </div>
+
+        <!-- 小说信息卡片 -->
+        <div class="row g-2 mb-3">
+            {% if novel.status %}
+            <div class="col-auto">
+                <span class="badge {{ 'bg-success' if novel.status == '已完结' else 'bg-warning text-dark' }}" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">
+                    <i class="bi {{ 'bi-check-circle' if novel.status == '已完结' else 'bi-clock' }}"></i>
+                    {{ novel.status }}
+                </span>
+            </div>
+            {% endif %}
+            {% if novel.word_count %}
+            <div class="col-auto">
+                <span class="badge bg-secondary" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">
+                    <i class="bi bi-file-text"></i> {{ novel.word_count }} 字
+                </span>
+            </div>
+            {% endif %}
+            {% if novel.chapter_count %}
+            <div class="col-auto">
+                <span class="badge bg-secondary" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">
+                    <i class="bi bi-list-ol"></i> {{ novel.chapter_count }} 章
+                </span>
+            </div>
+            {% endif %}
+            {% if novel.read_count %}
+            <div class="col-auto">
+                <span class="badge bg-secondary" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">
+                    <i class="bi bi-eye"></i> {{ novel.read_count }}
+                </span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- 评分趋势 -->
+        <div class="mb-3">
+            <small class="text-muted">
+                <i class="bi bi-graph-up"></i> 评分趋势：
+                {% set history = novel.rating_history|from_json %}
+                {% if history|length > 1 %}
+                    {% set first = history[0].rating %}
+                    {% set last = history[-1].rating %}
+                    {% if last > first %}
+                        <span class="text-success">↑ 上升</span>
+                    {% elif last < first %}
+                        <span class="text-danger">↓ 下降</span>
+                    {% else %}
+                        <span class="text-muted">— 持平</span>
+                    {% endif %}
+                    <span class="text-muted small">（共 {{ history|length }} 次记录）</span>
+                {% else %}
+                    <span class="text-muted">暂无趋势</span>
+                {% endif %}
+            </small>
+        </div>
+
+        {% if novel.read_date %}
+            <p class="text-muted">
+                <i class="bi bi-calendar"></i> 阅读时间：{{ novel.read_date }}
+            </p>
+        {% endif %}
+
+        <hr>
+
+        <h5>📖 内容简介</h5>
+        <p class="lead">{{ novel.summary }}</p>
+
+        <hr>
+
+        <h5>💬 我的推荐语</h5>
+        <p class="fs-5 fst-italic border-start border-5 border-warning ps-3">
+            {% if novel.recommendation %}
+                "{{ novel.recommendation }}"
+            {% else %}
+                <span class="text-muted">（暂无推荐语，待补充）</span>
+            {% endif %}
+        </p>
+        <div class="mt-2">
+            <a href="{{ url_for('edit_recommendation', novel_id=novel.id) }}" class="btn btn-outline-warning btn-sm">
+                <i class="bi bi-pencil-square"></i> 编辑推荐语
+            </a>
+        </div>
+
+        <hr>
+
+        <div class="mt-4">
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ url_for('toggle_want', novel_id=novel.id) }}"
+                   class="btn {{ 'btn-info' if novel.want_to_read else 'btn-outline-info' }}">
+                    <i class="bi {{ 'bi-eye-fill' if novel.want_to_read else 'bi-eye' }}"></i>
+                    {{ '取消想看' if novel.want_to_read else '标记为想看' }}
+                </a>
+
+                <a href="{{ url_for('toggle_featured', novel_id=novel.id) }}"
+                   class="btn {{ 'btn-warning' if novel.featured else 'btn-outline-warning' }}">
+                    <i class="bi {{ 'bi-star-fill' if novel.featured else 'bi-star' }}"></i>
+                    {{ '取消轮播' if novel.featured else '设为轮播' }}
+                </a>
+
+                <!-- 阅读进度（仅对想看列表显示） -->
+                {% if novel.want_to_read %}
+                <div class="d-flex gap-2 align-items-center">
+                    <form action="{{ url_for('update_progress', novel_id=novel.id) }}" method="post" class="d-flex gap-2 align-items-center">
+                        <label class="text-muted small"><i class="bi bi-bookmark"></i> 进度：</label>
+                        <input type="number" name="progress" class="form-control form-control-sm" style="width: 80px;"
+                               value="{{ novel.progress or 0 }}" min="0">
+                        <label class="text-muted small">章</label>
+                        <button type="submit" class="btn btn-sm btn-outline-primary">更新</button>
+                    </form>
+                </div>
+                {% endif %}
+
+                {% if novel.platform == '番茄小说' and novel.book_id %}
+                    <a href="https://fanqienovel.com/page/{{ novel.book_id }}" target="_blank" class="btn btn-success">
+                        <i class="bi bi-box-arrow-up-right"></i> 去番茄阅读
+                    </a>
+                {% endif %}
+
+                <form action="{{ url_for('remove_book', novel_id=novel.id) }}" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-outline-danger"
+                            onclick="return confirm('确定要从书单中删除《{{ novel.title }}》吗？')">
+                        <i class="bi bi-trash"></i> 删除
+                    </button>
+                </form>
+
+                <a href="/" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回书单
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

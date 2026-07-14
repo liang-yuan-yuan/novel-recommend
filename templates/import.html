@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}导入书单{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-upload"></i> 导入书单
+                </h4>
+            </div>
+            <div class="card-body">
+                {% if success %}
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle"></i> 导入成功！共导入 <strong>{{ count }}</strong> 本书。
+                    </div>
+                    <a href="{{ url_for('index') }}" class="btn btn-primary">
+                        <i class="bi bi-house"></i> 返回首页
+                    </a>
+                {% else %}
+                    <p class="text-muted">选择之前导出的 <code>booklist.json</code> 文件，恢复你的书单。</p>
+                    <form method="post" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <input type="file" name="file" class="form-control" accept=".json">
+                        </div>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-upload"></i> 导入
+                        </button>
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> 返回
+                        </a>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

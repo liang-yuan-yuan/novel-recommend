@@ -1,0 +1,42 @@
+/* ===== 卡片悬停效果 ===== */
+.hover-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.hover-card:hover {
+    transform: translateY(-8px) scale(1.01);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.15) !important;
+}
+
+/* 卡片图片悬停缩放 */
+.hover-card .card-img-top {
+    transition: transform 0.5s ease;
+}
+.hover-card:hover .card-img-top {
+    transform: scale(1.03);
+}
+
+/* ===== 滚动条美化 ===== */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}
+
+/* ===== 页面切换淡入动画（由 base.html 控制） ===== */
+
+/* ===== 按钮点击反馈 ===== */
+.btn:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+}

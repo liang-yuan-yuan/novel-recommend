@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+<style>
+    .ui-autocomplete {
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1050;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .ui-menu-item {
+        padding: 8px 14px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .ui-menu-item:hover {
+        background: #e9ecef;
+    }
+    .ui-menu-item .ui-state-active {
+        background: #007bff !important;
+        color: white !important;
+        border: none !important;
+    }
+</style>
+{% endblock %}
+
+{% block title %}搜索番茄小说{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="display-6 fw-bold">
+            <i class="bi bi-search"></i> 搜索番茄小说
+        </h1>
+        <p class="text-muted">搜索后点击按钮加入「已读推荐」或「想看」</p>
+    </div>
+</div>
+
+<!-- 搜索框 + 返回按钮 -->
+<div class="row mb-4">
+    <div class="col-md-9">
+        <form action="{{ url_for('search') }}" method="get" class="d-flex flex-nowrap gap-2">
+            <input type="text" name="q" id="searchInput" class="form-control form-control-lg flex-grow-1"
+                   placeholder="输入书名搜索..." value="{{ keyword or '' }}" autocomplete="off">
+            <button type="submit" class="btn btn-primary btn-lg flex-shrink-0">
+                <i class="bi bi-search"></i> 搜索
+            </button>
+        </form>
+    </div>
+    <div class="col-md-3 d-flex align-items-center">
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-lg w-100">
+            <i class="bi bi-house"></i> 返回书单
+        </a>
+    </div>
+</div>
+
+<!-- 搜索历史 -->
+{% set history = session.get('search_history', []) %}
+{% if history and results %}
+<div class="row mb-3">
+    <div class="col">
+        <div class="d-flex flex-wrap gap-1 align-items-center">
+            <span class="text-muted small"><i class="bi bi-clock-history"></i> 最近搜索：</span>
+            {% for h in history[:5] %}
+                <a href="{{ url_for('search', q=h) }}" class="badge bg-light text-dark text-decoration-none">
+                    {{ h }}
+                </a>
+            {% endfor %}
+            <a href="{{ url_for('clear_history') }}" class="badge bg-light text-danger text-decoration-none" title="清空历史">
+                <i class="bi bi-x"></i>
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 提示信息 -->
+{% if message %}
+<div class="row mb-3">
+    <div class="col">
+        <div class="alert alert-{{ 'success' if '成功' in message else 'warning' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 搜索结果 -->
+{% if results %}
+<div class="row">
+    <div class="col">
+        <p class="text-muted">找到 {{ results|length }} 本相关书籍</p>
+    </div>
+</div>
+<div class="row row-cols-1 row-cols-md-2 g-4">
+    {% for book in results %}
+    <div class="col">
+        <div class="card h-100 shadow-sm d-flex flex-column">
+            <div class="row g-0 flex-grow-1">
+                <div class="col-4 d-flex align-items-center">
+                    <img src="{{ url_for('get_cover', url=book.cover) }}"
+                         class="img-fluid rounded-start"
+                         style="aspect-ratio: 2/3; object-fit: cover; width: 100%;"
+                         alt="{{ book.title }}">
+                </div>
+                <div class="col-8 d-flex flex-column">
+                    <div class="card-body d-flex flex-column flex-grow-1">
+                        <h5 class="card-title" style="font-size: 0.95rem;">{{ book.title }}</h5>
+                        <p class="card-text text-muted small mb-1">
+                            <i class="bi bi-person"></i> {{ book.author }}
+                            <span class="badge bg-secondary ms-1">{{ book.category }}</span>
+                            {% if book.is_added %}
+                                <span class="badge bg-success ms-1">
+                                    <i class="bi bi-check-circle"></i> 已添加 ✅
+                                </span>
+                            {% endif %}
+                        </p>
+                        <p class="card-text small mb-1">
+                            <span class="text-warning">
+                                {{ book.score|stars|safe }}
+                            </span>
+                            {{ book.score }}/10
+                        </p>
+                        <p class="card-text small text-muted flex-grow-1" style="font-size: 0.8rem;">{{ book.abstract[:60] }}...</p>
+
+                        <div class="mt-auto">
+                            {% if book.is_added %}
+                                <button class="btn btn-secondary btn-sm" disabled>
+                                    <i class="bi bi-check-circle"></i> 已在书单中
+                                </button>
+                            {% else %}
+                                <form action="{{ url_for('add_from_tomato') }}" method="post" class="d-inline">
+                                    <input type="hidden" name="book_id" value="{{ book.book_id }}">
+                                    <input type="hidden" name="title" value="{{ book.title }}">
+                                    <input type="hidden" name="keyword" value="{{ keyword }}">
+                                    <input type="hidden" name="list_type" value="read">
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="bi bi-check-circle"></i> 已读推荐
+                                    </button>
+                                </form>
+                                <form action="{{ url_for('add_from_tomato') }}" method="post" class="d-inline">
+                                    <input type="hidden" name="book_id" value="{{ book.book_id }}">
+                                    <input type="hidden" name="title" value="{{ book.title }}">
+                                    <input type="hidden" name="keyword" value="{{ keyword }}">
+                                    <input type="hidden" name="list_type" value="want">
+                                    <button type="submit" class="btn btn-info btn-sm">
+                                        <i class="bi bi-eye"></i> 想看
+                                    </button>
+                                </form>
+                            {% endif %}
+
+                            {% if book.read_url %}
+                            <a href="{{ book.read_url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-box-arrow-up-right"></i> 阅读
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 翻页按钮 -->
+<div class="row mt-4">
+    <div class="col">
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('search', q=keyword, page=page-1, size=size) }}">
+                        <i class="bi bi-chevron-left"></i> 上一页
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#"><i class="bi bi-chevron-left"></i> 上一页</a>
+                </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <a class="page-link" href="#">{{ page }}</a>
+                </li>
+
+                {% if results|length >= size %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('search', q=keyword, page=page+1, size=size) }}">
+                        下一页 <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">下一页 <i class="bi bi-chevron-right"></i></a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        <p class="text-center text-muted small">第 {{ page }} 页，共显示 {{ results|length }} 本</p>
+    </div>
+</div>
+
+{% elif keyword %}
+<div class="row">
+    <div class="col">
+        <p class="text-muted">没有找到与 "{{ keyword }}" 相关的书籍</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- 底部返回按钮 -->
+<div class="row mt-4">
+    <div class="col">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> 返回书单
+        </a>
+    </div>
+</div>
+
+<script>
+$(function() {
+    $("#searchInput").autocomplete({
+        source: function(request, response) {
+            $.ajax({
+                url: "{{ url_for('autocomplete') }}",
+                dataType: "json",
+                data: {
+                    q: request.term
+                },
+                success: function(data) {
+                    response(data);
+                },
+                error: function() {
+                    response([]);
+                }
+            });
+        },
+        minLength: 1,
+        select: function(event, ui) {
+            $("#searchInput").val(ui.item.value);
+            $(this).closest('form').submit();
+        },
+        autoFocus: true
+    });
+});
+</script>
+{% endblock %}

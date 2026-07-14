@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}编辑推荐语 - {{ novel.title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-pencil-square"></i> 编辑推荐语
+                </h4>
+            </div>
+            <div class="card-body">
+                <h5 class="mb-3">{{ novel.title }}</h5>
+                <p class="text-muted small">
+                    <i class="bi bi-person"></i> {{ novel.author }} ·
+                    <span class="badge bg-secondary">{{ novel.category }}</span>
+                    {% if novel.platform == '番茄小说' %}
+                        <span class="badge bg-danger"><i class="bi bi-tomato"></i> 番茄</span>
+                    {% endif %}
+                </p>
+                <hr>
+
+                <form method="post">
+                    <div class="mb-3">
+                        <label for="recommendation" class="form-label fw-bold">
+                            <i class="bi bi-chat-quote"></i> 你的推荐语
+                        </label>
+                        <textarea name="recommendation" id="recommendation"
+                                  class="form-control"
+                                  rows="8"
+                                  placeholder="写下你推荐这本书的理由...">{{ novel.recommendation or '' }}</textarea>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle"></i> 最多 5000 字，尽情写下你的阅读感受吧
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> 保存推荐语
+                        </button>
+                        <a href="{{ url_for('detail', novel_id=novel.id) }}" class="btn btn-secondary">
+                            <i class="bi bi-x-lg"></i> 取消
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
