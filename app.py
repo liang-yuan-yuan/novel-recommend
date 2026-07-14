@@ -72,6 +72,41 @@ def from_json_filter(json_str):
         return []
 
 
+# ===== 封面下载函数 =====
+def download_cover_to_local(url):
+    """下载封面到本地"""
+    if not url:
+        return None
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Referer": "https://fanqienovel.com/",
+        }
+        response = requests.get(url, headers=headers, timeout=15)
+        if response.status_code == 200:
+            cover_dir = os.path.join('static', 'covers')
+            os.makedirs(cover_dir, exist_ok=True)
+            url_hash = hashlib.md5(url.encode()).hexdigest()
+            file_path = os.path.join(cover_dir, f'{url_hash}.jpg')
+
+            # 尝试转换 HEIC
+            try:
+                import pillow_heif
+                pillow_heif.register_heif_opener()
+                from PIL import Image
+                img = Image.open(io.BytesIO(response.content))
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    img = img.convert('RGB')
+                img.save(file_path, 'JPEG', quality=90)
+            except:
+                with open(file_path, 'wb') as f:
+                    f.write(response.content)
+            return file_path
+    except Exception as e:
+        print(f"下载封面失败: {e}")
+    return None
+
+
 # ===== 错误处理 =====
 @app.errorhandler(404)
 def page_not_found(e):
@@ -136,6 +171,11 @@ def import_data():
         try:
             data = json.load(file)
             count = 0
+
+            # 确保封面目录存在
+            cover_dir = os.path.join('static', 'covers')
+            os.makedirs(cover_dir, exist_ok=True)
+
             for item in data:
                 existing = Novel.query.filter_by(title=item.get('title')).first()
                 if not existing:
@@ -161,11 +201,32 @@ def import_data():
                     db.session.add(novel)
                     count += 1
             db.session.commit()
+
+            # 导入后下载所有封面
+            novels = Novel.query.all()
+            for n in novels:
+                if n.cover:
+                    download_cover_to_local(n.cover)
+
             return render_template('import.html', success=True, count=count)
         except Exception as e:
             return f"导入失败: {e}", 500
 
     return render_template('import.html', success=False)
+
+
+# ===== 一键下载封面 =====
+@app.route('/download_covers')
+def download_covers():
+    """下载所有缺失的封面"""
+    novels = Novel.query.all()
+    downloaded = 0
+    for n in novels:
+        if n.cover:
+            result = download_cover_to_local(n.cover)
+            if result:
+                downloaded += 1
+    return f"✅ 已下载 {downloaded} 个封面"
 
 
 # ===== 更新阅读进度 =====
@@ -446,22 +507,18 @@ def dashboard():
     """阅读统计仪表盘"""
     novels = Novel.query.all()
 
-    # 基本统计
     total = len(novels)
     read_count = Novel.query.filter_by(want_to_read=False).count()
     want_count = Novel.query.filter_by(want_to_read=True).count()
 
-    # 平均评分（已读的）
     read_books = [n for n in novels if not n.want_to_read and n.rating]
     avg_rating = round(sum(n.rating for n in read_books) / len(read_books), 1) if read_books else 0
 
-    # 分类统计
     category_data = {}
     for novel in novels:
         if novel.category:
             category_data[novel.category] = category_data.get(novel.category, 0) + 1
 
-    # 评分分布统计
     rating_dist = {'0-5': 0, '5-6': 0, '6-7': 0, '7-8': 0, '8-9': 0, '9-10': 0}
     for novel in read_books:
         r = novel.rating or 0
@@ -478,7 +535,6 @@ def dashboard():
         else:
             rating_dist['9-10'] += 1
 
-    # 最新添加的5本书
     recent_books = sorted(novels, key=lambda x: x.id, reverse=True)[:5]
 
     return render_template('dashboard.html',
@@ -495,7 +551,6 @@ def dashboard():
 # ===== 评分趋势 API =====
 @app.route('/api/rating_trend/<int:novel_id>')
 def rating_trend_api(novel_id):
-    """获取单本书的评分趋势数据"""
     novel = Novel.query.get_or_404(novel_id)
     history = json.loads(novel.rating_history) if novel.rating_history else []
 
@@ -790,6 +845,10 @@ def add_from_tomato():
 
     db.session.add(novel)
     db.session.commit()
+
+    # 下载封面
+    if novel.cover:
+        download_cover_to_local(novel.cover)
 
     existing_titles = set(novel.title for novel in Novel.query.all())
     for book in results:
