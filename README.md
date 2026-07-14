@@ -62,6 +62,7 @@
 ---
 
 ## 📁 项目结构
+```bash
 personProject/
 ├── app.py # 主程序
 ├── models.py # 数据库模型
@@ -87,7 +88,7 @@ personProject/
 │
 ├── start.bat # 一键启动脚本（Windows）
 └── stop.bat # 一键停止脚本（Windows）
-
+```
 
 ---
 
@@ -102,17 +103,23 @@ cd novel-recommend
 ```
 
 #### 2. 创建虚拟环境
+```
 python -m venv venv
 # Windows
 venv\Scripts\activate
 # Mac/Linux
 source venv/bin/activate
+```
 
 #### 3. 安装依赖
+```bash
 pip install -r requirements.txt
+```
 
 #### 4. 运行项目
+```bash
 python app.py
+```
 
 一键启动（Windows）
 双击 start.bat 即可自动启动所有服务并打开浏览器。
