@@ -125,6 +125,7 @@ python app.py
 双击 start.bat 即可自动启动所有服务并打开浏览器。
 
 📦 依赖清单
+```bash
 text
 Flask==2.3.2
 Flask-SQLAlchemy==3.0.5
@@ -132,6 +133,7 @@ requests==2.31.0
 Pillow==10.1.0
 pillow-heif==1.4.0
 gunicorn==21.2.0
+```
 
 🔗 在线演示
 平台	          地址
@@ -148,18 +150,16 @@ PythonAnywhere	https://liang233.pythonanywhere.com
 建议定期使用「导出」功能备份书单数据，防止数据丢失。
 
 📄 开源协议
+```bash
 MIT License
 Copyright (c) 2026 liang-yuan-yuan
+```
 
 👤 作者
+```bash
 liang-yuan-yuan
 GitHub: @liang-yuan-yuan
-
-
-
-
-
-
+```
 
 
 
