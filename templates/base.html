@@ -15,17 +15,6 @@
     <meta property="og:type" content="website">
     <meta name="robots" content="index, follow">
 
-    <!-- 百度统计（替换成你的ID） -->
-    <script>
-    var _hmt = _hmt || [];
-    (function() {
-        var hm = document.createElement("script");
-        hm.src = "https://hm.baidu.com/hm.js?你的百度统计ID";
-        var s = document.getElementsByTagName("script")[0];
-        s.parentNode.insertBefore(hm, s);
-    })();
-    </script>
-
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
@@ -161,46 +150,56 @@
             background: rgba(30,30,50,0.95) !important;
             border: 1px solid #3a3a5e;
         }
+        [data-bs-theme="dark"] .bg-container {
+            background-color: #1a1a2e;
+        }
 
-        /* ===== 自定义背景 ===== */
-        .bg-default {
+        /* ===== 自定义背景容器 ===== */
+        .bg-container {
+            min-height: 100vh;
+            padding: 0;
+            transition: background 0.3s ease;
+        }
+
+        .bg-default .bg-container {
             background: #f8f9fa;
         }
-        .bg-dark-mode {
+        .bg-dark-mode .bg-container {
             background: #1a1a2e;
         }
-        .bg-gradient {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-            min-height: 100vh;
+        .bg-gradient .bg-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-        .bg-ocean {
-            background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%) !important;
-            min-height: 100vh;
+        .bg-ocean .bg-container {
+            background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
         }
-        .bg-forest {
-            background: linear-gradient(135deg, #134e5e 0%, #71b280 100%) !important;
-            min-height: 100vh;
+        .bg-forest .bg-container {
+            background: linear-gradient(135deg, #134e5e 0%, #71b280 100%);
         }
-        .bg-sunset {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
-            min-height: 100vh;
+        .bg-sunset .bg-container {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         }
-        .bg-midnight {
-            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%) !important;
-            min-height: 100vh;
+        .bg-midnight .bg-container {
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
         }
-        .bg-custom {
+        .bg-custom .bg-container {
             background-size: cover !important;
             background-position: center !important;
             background-attachment: fixed !important;
-            min-height: 100vh;
         }
-        .bg-default main, .bg-dark-mode main, .bg-gradient main, .bg-ocean main, .bg-forest main, .bg-sunset main, .bg-midnight main, .bg-custom main {
-            background: transparent !important;
+
+        /* 页脚背景透明 */
+        .bg-default footer,
+        .bg-dark-mode footer,
+        .bg-gradient footer,
+        .bg-ocean footer,
+        .bg-forest footer,
+        .bg-sunset footer,
+        .bg-midnight footer,
+        .bg-custom footer {
+            background: rgba(255, 255, 255, 0.8) !important;
         }
-        .bg-default footer, .bg-dark-mode footer, .bg-gradient footer, .bg-ocean footer, .bg-forest footer, .bg-sunset footer, .bg-midnight footer, .bg-custom footer {
-            background: rgba(255,255,255,0.8) !important;
-        }
+
         [data-bs-theme="dark"] .bg-default footer,
         [data-bs-theme="dark"] .bg-dark-mode footer,
         [data-bs-theme="dark"] .bg-gradient footer,
@@ -209,19 +208,19 @@
         [data-bs-theme="dark"] .bg-sunset footer,
         [data-bs-theme="dark"] .bg-midnight footer,
         [data-bs-theme="dark"] .bg-custom footer {
-            background: rgba(20,20,40,0.8) !important;
+            background: rgba(20, 20, 40, 0.8) !important;
         }
 
-        /* 背景选择面板 */
+        /* ===== 背景选择面板 ===== */
         #bgPanel {
             position: fixed;
             bottom: 80px;
             right: 30px;
             z-index: 1000;
-            background: rgba(255,255,255,0.95);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 12px;
             padding: 15px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
             display: none;
             min-width: 200px;
         }
@@ -229,6 +228,7 @@
             display: block;
             animation: fadeIn 0.3s ease;
         }
+
         .bg-option {
             width: 40px;
             height: 40px;
@@ -348,7 +348,7 @@
                 <i class="bi bi-book"></i> 我的私人书单
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <span class="navbar-text text-light-emphasis d-none d-lg-inline">
@@ -378,8 +378,8 @@
                         <i class="bi bi-house"></i> 首页
                     </a>
                     <form class="d-flex" action="{{ url_for('search') }}" method="get">
-                        <input class="form-control form-control-sm" type="search"
-                               name="q" placeholder="搜番茄小说..." aria-label="Search">
+                        <input class="form-control form-control-sm" type="search" name="q"
+                            placeholder="搜番茄小说..." aria-label="Search">
                         <button class="btn btn-outline-light btn-sm" type="submit">
                             <i class="bi bi-search"></i>
                         </button>
@@ -411,10 +411,13 @@
         </div>
     </div>
 
-    <!-- 主体内容 -->
-    <main class="container py-4">
-        {% block content %}{% endblock %}
-    </main>
+    <!-- 背景容器 -->
+    <div class="bg-container">
+        <!-- 主体内容 -->
+        <main class="container py-4">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
 
     <!-- 页脚 -->
     <footer class="bg-light text-center text-muted py-3 mt-5">
@@ -445,7 +448,6 @@
             bar.style.opacity = '1';
             progressValue = 0;
             fill.style.width = '0%';
-
             clearInterval(progressInterval);
             progressInterval = setInterval(() => {
                 progressValue += Math.random() * 15 + 5;
@@ -516,15 +518,19 @@
         }
 
         function setBg(type) {
-            const body = document.body;
-            body.className = body.className.split(' ').filter(c => !c.startsWith('bg-')).join(' ');
+            const container = document.querySelector('.bg-container');
+            // 移除所有背景类
+            container.className = 'bg-container';
+            document.body.className = document.body.className.split(' ').filter(c => !c.startsWith('bg-')).join(
+            ' ');
 
             if (type === 'default') {
-                body.classList.add('bg-default');
+                document.body.classList.add('bg-default');
             } else if (type === 'dark-mode') {
-                body.classList.add('bg-dark-mode');
-            } else if (type === 'gradient' || type === 'ocean' || type === 'forest' || type === 'sunset' || type === 'midnight') {
-                body.classList.add('bg-' + type);
+                document.body.classList.add('bg-dark-mode');
+            } else if (type === 'gradient' || type === 'ocean' || type === 'forest' || type === 'sunset' || type ===
+                'midnight') {
+                document.body.classList.add('bg-' + type);
             }
 
             localStorage.setItem('bgType', type);
@@ -537,10 +543,12 @@
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(event) {
-                const body = document.body;
-                body.className = body.className.split(' ').filter(c => !c.startsWith('bg-')).join(' ');
-                body.classList.add('bg-custom');
-                body.style.backgroundImage = 'url(' + event.target.result + ')';
+                const container = document.querySelector('.bg-container');
+                container.className = 'bg-container';
+                document.body.className = document.body.className.split(' ').filter(c => !c.startsWith('bg-')).join(
+                    ' ');
+                document.body.classList.add('bg-custom');
+                container.style.backgroundImage = 'url(' + event.target.result + ')';
                 localStorage.setItem('bgType', 'custom');
                 localStorage.setItem('bgImage', event.target.result);
                 updateBgOptions('custom');
@@ -550,9 +558,11 @@
         }
 
         function resetBg() {
-            const body = document.body;
-            body.className = body.className.split(' ').filter(c => !c.startsWith('bg-')).join(' ');
-            body.style.backgroundImage = '';
+            const container = document.querySelector('.bg-container');
+            container.className = 'bg-container';
+            container.style.backgroundImage = '';
+            document.body.className = document.body.className.split(' ').filter(c => !c.startsWith('bg-')).join(
+            ' ');
             localStorage.removeItem('bgType');
             localStorage.removeItem('bgImage');
             updateBgOptions('default');
@@ -593,8 +603,9 @@
             if (bgType === 'custom') {
                 const bgImage = localStorage.getItem('bgImage');
                 if (bgImage) {
+                    const container = document.querySelector('.bg-container');
                     document.body.classList.add('bg-custom');
-                    document.body.style.backgroundImage = 'url(' + bgImage + ')';
+                    container.style.backgroundImage = 'url(' + bgImage + ')';
                     updateBgOptions('custom');
                 }
             } else if (bgType && bgType !== 'default') {
@@ -678,16 +689,16 @@
         function checkTomatoService() {
             const statusEl = document.getElementById('service-status');
             fetch('http://127.0.0.1:18423/', {
-                method: 'GET',
-                mode: 'no-cors',
-                signal: AbortSignal.timeout(3000)
-            })
-            .then(() => {
-                statusEl.innerHTML = '<span class="badge bg-success">✅ 番茄服务已连接</span>';
-            })
-            .catch(() => {
-                statusEl.innerHTML = '<span class="badge bg-danger">❌ 番茄服务未连接（搜索功能不可用）</span>';
-            });
+                    method: 'GET',
+                    mode: 'no-cors',
+                    signal: AbortSignal.timeout(3000)
+                })
+                .then(() => {
+                    statusEl.innerHTML = '<span class="badge bg-success">✅ 番茄服务已连接</span>';
+                })
+                .catch(() => {
+                    statusEl.innerHTML = '<span class="badge bg-danger">❌ 番茄服务未连接（搜索功能不可用）</span>';
+                });
         }
         checkTomatoService();
         setInterval(checkTomatoService, 30000);
