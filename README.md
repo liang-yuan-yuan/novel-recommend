@@ -121,10 +121,10 @@ pip install -r requirements.txt
 python app.py
 ```
 
-一键启动（Windows）
+#### 一键启动（Windows）
 双击 start.bat 即可自动启动所有服务并打开浏览器。
 
-📦 依赖清单
+#### 📦 依赖清单
 ```bash
 text
 Flask==2.3.2
@@ -135,35 +135,29 @@ pillow-heif==1.4.0
 gunicorn==21.2.0
 ```
 
-🔗 在线演示
+#### 🔗 在线演示
 | 平台 | 地址 |
 |------|------|
 | PythonAnywhere | https://liang233.pythonanywhere.com|
 
-📝 注意事项
-```bash
+#### 📝 注意事项
 ⚠️ 搜索功能
 部署到云端后，由于番茄小说API限制，搜索功能可能不可用。推荐在本地添加书籍后，通过「导出/导入」功能同步数据到云端。
-```
 
-🖼️ 封面图片
+#### 🖼️ 封面图片
 封面图片会自动下载到 static/covers/ 目录，首次加载可能需要稍等片刻。
 
-💾 数据备份
+#### 💾 数据备份
 建议定期使用「导出」功能备份书单数据，防止数据丢失。
 
-📄 开源协议
+#### 📄 开源协议
 ```bash
 MIT License
 Copyright (c) 2026 liang-yuan-yuan
 ```
 
-👤 作者
+#### 👤 作者
 ```bash
 liang-yuan-yuan
 GitHub: @liang-yuan-yuan
 ```
-
-
-
-
