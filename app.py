@@ -612,59 +612,28 @@ def get_cover():
         abort(400)
 
     try:
-        cover_dir = os.path.join('static', 'covers')
-        os.makedirs(cover_dir, exist_ok=True)
-        url_hash = hashlib.md5(url.encode()).hexdigest()
-        file_path = os.path.join(cover_dir, f'{url_hash}.jpg')
-
-        if os.path.exists(file_path):
-            return send_file(file_path, mimetype='image/jpeg')
-
+        # 用更精简的请求头，不发送 Referer
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Referer": "https://fanqienovel.com/",
+            "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
         }
-        response = requests.get(url, headers=headers, timeout=15)
+        # 注意：不设置 Referer
+        response = requests.get(url, headers=headers, timeout=10)
 
         if response.status_code == 200:
-            content = response.content
-            success = False
-
-            try:
-                import pillow_heif
-                pillow_heif.register_heif_opener()
-                from PIL import Image
-                img = Image.open(io.BytesIO(content))
-                if img.mode in ('RGBA', 'LA', 'P'):
-                    img = img.convert('RGB')
-                img.save(file_path, 'JPEG', quality=90)
-                success = True
-            except ImportError:
-                pass
-            except Exception as e:
-                print(f"pillow-heif转换失败: {e}")
-
-            if not success:
-                try:
-                    from PIL import Image
-                    img = Image.open(io.BytesIO(content))
-                    if img.mode in ('RGBA', 'LA', 'P'):
-                        img = img.convert('RGB')
-                    img.save(file_path, 'JPEG', quality=90)
-                    success = True
-                except Exception as e:
-                    print(f"PIL转换失败: {e}")
-
-            if not success:
-                with open(file_path, 'wb') as f:
-                    f.write(content)
-
-            return send_file(file_path, mimetype='image/jpeg')
+            return send_file(
+                io.BytesIO(response.content),
+                mimetype=response.headers.get('Content-Type', 'image/jpeg')
+            )
         else:
-            abort(404)
+            # 如果还是失败，返回默认封面
+            default = "https://img3.doubanio.com/f/shire/5522dd1f5b742d1b3ce3f0e1c1b7f1a8c0f2e3e8.jpg"
+            return redirect(default)
     except Exception as e:
         print(f"封面获取错误: {e}")
-        abort(500)
+        default = "https://img3.doubanio.com/f/shire/5522dd1f5b742d1b3ce3f0e1c1b7f1a8c0f2e3e8.jpg"
+        return redirect(default)
 
 
 # ===== 更新评分 =====

@@ -19,7 +19,8 @@
         {% for novel in featured_novels %}
         <div class="carousel-item {{ 'active' if loop.first else '' }}">
             <div class="position-relative" style="height: 50vh; min-height: 300px; max-height: 500px; overflow: hidden; background: #1a1a2e;">
-                <img src="https://images.weserv.nl/?url={{ novel.cover | urlencode }}&cache=on&w=400"
+                <!-- ✅ 修改为本地代理 -->
+                <img src="{{ url_for('get_cover', url=novel.cover) }}"
                      class="d-block w-100"
                      style="height: 100%; object-fit: cover; filter: blur(12px) brightness(0.5); transform: scale(1.05);"
                      loading="lazy"
@@ -29,7 +30,8 @@
                      style="width: 90%; max-width: 850px;">
                     <div class="row g-4 w-100 align-items-center">
                         <div class="col-md-4 text-center">
-                            <img src="https://images.weserv.nl/?url={{ novel.cover | urlencode }}&cache=on&w=400"
+                            <!-- ✅ 修改为本地代理 -->
+                            <img src="{{ url_for('get_cover', url=novel.cover) }}"
                                  class="img-fluid rounded-3 shadow-lg"
                                  style="max-height: 280px; width: auto; object-fit: cover;"
                                  loading="lazy"
@@ -341,7 +343,8 @@
         {% for novel in novels %}
         <div class="col">
             <div class="card h-100 shadow-sm hover-card d-flex flex-column" style="border-radius: 8px;">
-                <img src="https://images.weserv.nl/?url={{ novel.cover | urlencode }}&cache=on&w=400"
+                <!-- ✅ 修改为本地代理 -->
+                <img src="{{ url_for('get_cover', url=novel.cover) }}"
                      class="card-img-top"
                      alt="{{ novel.title }}"
                      loading="lazy"
@@ -417,7 +420,7 @@
                         <form action="{{ url_for('remove_book', novel_id=novel.id) }}" method="post" class="d-inline">
                             <button type="submit" class="btn btn-sm btn-outline-danger"
                                     onclick="return confirm('确定要删除吗？')"
-                                    style="font-size: 0.6rem; padding: 0.15rem 0.4rem; line-height: 2; display: inline-flex; align-items: center; gap: 2px;">
+                                    style="font-size: 0.6rem; padding: 0.15rem 0.4rem; line-height: 1; display: inline-flex; align-items: center; gap: 2px;">
                                 <i class="bi bi-trash"></i>
                                 <span class="d-none d-sm-inline">删除</span>
                             </button>

@@ -129,7 +129,7 @@
         <div class="card h-100 shadow-sm d-flex flex-column">
             <div class="row g-0 flex-grow-1">
                 <div class="col-4 d-flex align-items-center">
-                    <img src="https://images.weserv.nl/?url={{ book.cover | urlencode }}&cache=on&w=200"
+                    <img src="{{ url_for('get_cover', url=book.cover) }}"
                          class="img-fluid rounded-start"
                          style="aspect-ratio: 2/3; object-fit: cover; width: 100%;"
                          loading="lazy"
