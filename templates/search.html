@@ -28,6 +28,29 @@
         color: white !important;
         border: none !important;
     }
+
+    /* Toast 提示 */
+    .custom-toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        padding: 12px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        max-width: 400px;
+        animation: slideDown 0.3s ease;
+    }
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 {% endblock %}
 
@@ -106,9 +129,11 @@
         <div class="card h-100 shadow-sm d-flex flex-column">
             <div class="row g-0 flex-grow-1">
                 <div class="col-4 d-flex align-items-center">
-                    <img src="{{ url_for('get_cover', url=book.cover) }}"
+                    <img src="https://images.weserv.nl/?url={{ book.cover | urlencode }}&cache=on&w=200"
                          class="img-fluid rounded-start"
                          style="aspect-ratio: 2/3; object-fit: cover; width: 100%;"
+                         loading="lazy"
+                         decoding="async"
                          alt="{{ book.title }}">
                 </div>
                 <div class="col-8 d-flex flex-column">
@@ -118,7 +143,7 @@
                             <i class="bi bi-person"></i> {{ book.author }}
                             <span class="badge bg-secondary ms-1">{{ book.category }}</span>
                             {% if book.is_added %}
-                                <span class="badge bg-success ms-1">
+                                <span class="badge bg-success ms-1 is-added-badge">
                                     <i class="bi bi-check-circle"></i> 已添加 ✅
                                 </span>
                             {% endif %}
@@ -137,24 +162,20 @@
                                     <i class="bi bi-check-circle"></i> 已在书单中
                                 </button>
                             {% else %}
-                                <form action="{{ url_for('add_from_tomato') }}" method="post" class="d-inline">
-                                    <input type="hidden" name="book_id" value="{{ book.book_id }}">
-                                    <input type="hidden" name="title" value="{{ book.title }}">
-                                    <input type="hidden" name="keyword" value="{{ keyword }}">
-                                    <input type="hidden" name="list_type" value="read">
-                                    <button type="submit" class="btn btn-success btn-sm">
-                                        <i class="bi bi-check-circle"></i> 已读推荐
-                                    </button>
-                                </form>
-                                <form action="{{ url_for('add_from_tomato') }}" method="post" class="d-inline">
-                                    <input type="hidden" name="book_id" value="{{ book.book_id }}">
-                                    <input type="hidden" name="title" value="{{ book.title }}">
-                                    <input type="hidden" name="keyword" value="{{ keyword }}">
-                                    <input type="hidden" name="list_type" value="want">
-                                    <button type="submit" class="btn btn-info btn-sm">
-                                        <i class="bi bi-eye"></i> 想看
-                                    </button>
-                                </form>
+                                <button class="btn btn-success btn-sm add-book-btn"
+                                        data-book-id="{{ book.book_id }}"
+                                        data-title="{{ book.title }}"
+                                        data-keyword="{{ keyword }}"
+                                        data-list-type="read">
+                                    <i class="bi bi-check-circle"></i> 已读推荐
+                                </button>
+                                <button class="btn btn-info btn-sm add-book-btn"
+                                        data-book-id="{{ book.book_id }}"
+                                        data-title="{{ book.title }}"
+                                        data-keyword="{{ keyword }}"
+                                        data-list-type="want">
+                                    <i class="bi bi-eye"></i> 想看
+                                </button>
                             {% endif %}
 
                             {% if book.read_url %}
@@ -252,5 +273,78 @@ $(function() {
         autoFocus: true
     });
 });
+
+// ===== AJAX 添加书籍 =====
+document.querySelectorAll('.add-book-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        const bookId = this.dataset.bookId;
+        const title = this.dataset.title;
+        const keyword = this.dataset.keyword;
+        const listType = this.dataset.listType;
+        const btn = this;
+        const card = btn.closest('.card');
+
+        // 禁用按钮，防止重复点击
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+
+        fetch("{{ url_for('add_from_tomato_ajax') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                'book_id': bookId,
+                'title': title,
+                'keyword': keyword,
+                'list_type': listType
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 成功：显示提示，标记为已添加
+                const badge = card.querySelector('.is-added-badge');
+                if (badge) {
+                    badge.style.display = 'inline';
+                }
+                btn.outerHTML = '<button class="btn btn-secondary btn-sm" disabled><i class="bi bi-check-circle"></i> 已在书单中</button>';
+                // 显示成功提示
+                showToast(data.message, 'success');
+            } else {
+                showToast(data.message, 'warning');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle"></i> ' + (listType === 'read' ? '已读推荐' : '想看');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('添加失败，请重试', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle"></i> ' + (listType === 'read' ? '已读推荐' : '想看');
+        });
+    });
+});
+
+// ===== Toast 提示 =====
+function showToast(message, type) {
+    const existing = document.querySelector('.custom-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.className = `custom-toast alert alert-${type} alert-dismissible fade show`;
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    document.body.appendChild(toast);
+
+    // 3秒后自动消失
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
 </script>
 {% endblock %}

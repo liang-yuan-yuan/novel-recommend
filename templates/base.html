@@ -15,6 +15,9 @@
     <meta property="og:type" content="website">
     <meta name="robots" content="index, follow">
 
+    <!-- 图片缓存策略 -->
+    <meta http-equiv="Cache-Control" content="max-age=604800, public">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
@@ -286,43 +289,6 @@
         .view-list .hover-card:hover .card-img-top {
             transform: none !important;
         }
-
-        /* ===== 紧凑视图 ===== */
-        .view-compact .col {
-            flex: 0 0 20% !important;
-            max-width: 20% !important;
-        }
-        .view-compact .card-body {
-            padding: 0.3rem 0.4rem 0.4rem !important;
-        }
-        .view-compact .card-title {
-            font-size: 0.65rem !important;
-        }
-        .view-compact .card-text {
-            font-size: 0.5rem !important;
-        }
-        .view-compact .badge {
-            font-size: 0.4rem !important;
-        }
-        .view-compact .btn-sm {
-            font-size: 0.4rem !important;
-            padding: 0.05rem 0.2rem !important;
-        }
-        .view-compact .card-img-top {
-            aspect-ratio: 2/3 !important;
-        }
-        @media (max-width: 768px) {
-            .view-compact .col {
-                flex: 0 0 33.33% !important;
-                max-width: 33.33% !important;
-            }
-        }
-        @media (max-width: 480px) {
-            .view-compact .col {
-                flex: 0 0 50% !important;
-                max-width: 50% !important;
-            }
-        }
     </style>
     {% block head %}{% endblock %}
 </head>
@@ -348,7 +314,7 @@
                 <i class="bi bi-book"></i> 我的私人书单
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <span class="navbar-text text-light-emphasis d-none d-lg-inline">
@@ -379,7 +345,7 @@
                     </a>
                     <form class="d-flex" action="{{ url_for('search') }}" method="get">
                         <input class="form-control form-control-sm" type="search" name="q"
-                            placeholder="搜番茄小说..." aria-label="Search">
+                               placeholder="搜番茄小说..." aria-label="Search">
                         <button class="btn btn-outline-light btn-sm" type="submit">
                             <i class="bi bi-search"></i>
                         </button>
@@ -487,26 +453,18 @@
             const container = document.getElementById('book-list');
             const gridBtn = document.getElementById('gridView');
             const listBtn = document.getElementById('listView');
-            const compactBtn = document.getElementById('compactView');
 
             if (!container) return;
 
-            container.parentElement.classList.remove('view-list', 'view-compact');
+            container.parentElement.classList.remove('view-list');
 
             if (view === 'list') {
                 container.parentElement.classList.add('view-list');
                 if (gridBtn) gridBtn.className = 'btn btn-outline-primary';
                 if (listBtn) listBtn.className = 'btn btn-primary';
-                if (compactBtn) compactBtn.className = 'btn btn-outline-primary';
-            } else if (view === 'compact') {
-                container.parentElement.classList.add('view-compact');
-                if (gridBtn) gridBtn.className = 'btn btn-outline-primary';
-                if (listBtn) listBtn.className = 'btn btn-outline-primary';
-                if (compactBtn) compactBtn.className = 'btn btn-primary';
             } else {
                 if (gridBtn) gridBtn.className = 'btn btn-primary';
                 if (listBtn) listBtn.className = 'btn btn-outline-primary';
-                if (compactBtn) compactBtn.className = 'btn btn-outline-primary';
             }
             localStorage.setItem('viewMode', view);
         }
@@ -519,7 +477,6 @@
 
         function setBg(type) {
             const container = document.querySelector('.bg-container');
-            // 移除所有背景类
             container.className = 'bg-container';
             document.body.className = document.body.className.split(' ').filter(c => !c.startsWith('bg-')).join(
             ' ');

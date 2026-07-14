@@ -72,38 +72,9 @@ def from_json_filter(json_str):
         return []
 
 
-# ===== 封面下载函数 =====
+# ===== 封面下载函数（已禁用，保留备用） =====
 def download_cover_to_local(url):
-    """下载封面到本地"""
-    if not url:
-        return None
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Referer": "https://fanqienovel.com/",
-        }
-        response = requests.get(url, headers=headers, timeout=15)
-        if response.status_code == 200:
-            cover_dir = os.path.join('static', 'covers')
-            os.makedirs(cover_dir, exist_ok=True)
-            url_hash = hashlib.md5(url.encode()).hexdigest()
-            file_path = os.path.join(cover_dir, f'{url_hash}.jpg')
-
-            # 尝试转换 HEIC
-            try:
-                import pillow_heif
-                pillow_heif.register_heif_opener()
-                from PIL import Image
-                img = Image.open(io.BytesIO(response.content))
-                if img.mode in ('RGBA', 'LA', 'P'):
-                    img = img.convert('RGB')
-                img.save(file_path, 'JPEG', quality=90)
-            except:
-                with open(file_path, 'wb') as f:
-                    f.write(response.content)
-            return file_path
-    except Exception as e:
-        print(f"下载封面失败: {e}")
+    """下载封面到本地（已禁用，使用 weserv 代理）"""
     return None
 
 
@@ -124,6 +95,8 @@ def internal_error(e):
 def add_header(response):
     if 'static' in request.path:
         response.headers['Cache-Control'] = 'public, max-age=86400'
+    if request.path.startswith('/cover') or 'image' in request.path:
+        response.headers['Cache-Control'] = 'public, max-age=604800'
     return response
 
 
@@ -143,6 +116,7 @@ def export_data():
             'platform': n.platform,
             'read_date': n.read_date,
             'book_id': n.book_id,
+            'cover': n.cover,
             'word_count': n.word_count,
             'chapter_count': n.chapter_count,
             'status': n.status,
@@ -172,10 +146,6 @@ def import_data():
             data = json.load(file)
             count = 0
 
-            # 确保封面目录存在
-            cover_dir = os.path.join('static', 'covers')
-            os.makedirs(cover_dir, exist_ok=True)
-
             for item in data:
                 existing = Novel.query.filter_by(title=item.get('title')).first()
                 if not existing:
@@ -201,32 +171,12 @@ def import_data():
                     db.session.add(novel)
                     count += 1
             db.session.commit()
-
-            # 导入后下载所有封面
-            novels = Novel.query.all()
-            for n in novels:
-                if n.cover:
-                    download_cover_to_local(n.cover)
-
+            cache.clear()
             return render_template('import.html', success=True, count=count)
         except Exception as e:
             return f"导入失败: {e}", 500
 
     return render_template('import.html', success=False)
-
-
-# ===== 一键下载封面 =====
-@app.route('/download_covers')
-def download_covers():
-    """下载所有缺失的封面"""
-    novels = Novel.query.all()
-    downloaded = 0
-    for n in novels:
-        if n.cover:
-            result = download_cover_to_local(n.cover)
-            if result:
-                downloaded += 1
-    return f"✅ 已下载 {downloaded} 个封面"
 
 
 # ===== 更新阅读进度 =====
@@ -358,7 +308,7 @@ with app.app_context():
 
 # ===== 首页 =====
 @app.route('/')
-@cache.cached(timeout=300)
+@cache.cached(timeout=300, unless=lambda: request.args.get('list') == 'want' or request.args.get('rating') != 'all')
 def index():
     sort = request.args.get('sort', 'latest')
     rating_filter = request.args.get('rating', 'all')
@@ -504,7 +454,6 @@ def category_filter(category_name):
 @app.route('/dashboard')
 @cache.cached(timeout=300)
 def dashboard():
-    """阅读统计仪表盘"""
     novels = Novel.query.all()
 
     total = len(novels)
@@ -607,6 +556,7 @@ def toggle_featured(novel_id):
     novel = Novel.query.get_or_404(novel_id)
     novel.featured = not novel.featured
     db.session.commit()
+    cache.clear()
     referer = request.headers.get('Referer', '/')
     return redirect(referer)
 
@@ -617,6 +567,7 @@ def toggle_want(novel_id):
     novel = Novel.query.get_or_404(novel_id)
     novel.want_to_read = not novel.want_to_read
     db.session.commit()
+    cache.clear()
     referer = request.headers.get('Referer', '/')
     return redirect(referer)
 
@@ -629,6 +580,7 @@ def remove_book(novel_id):
         novel.featured = False
     db.session.delete(novel)
     db.session.commit()
+    cache.clear()
     referer = request.headers.get('Referer', '/')
     return redirect(referer)
 
@@ -740,44 +692,16 @@ def update_ratings():
     return f"更新完成，{updated} 本书评分已更新"
 
 
-# ===== 搜索番茄小说 =====
-@app.route('/search')
-def search():
-    keyword = request.args.get('q', '').strip()
-    page = request.args.get('page', 1, type=int)
-    size = request.args.get('size', 30, type=int)
-
-    if keyword:
-        history = session.get('search_history', [])
-        if keyword in history:
-            history.remove(keyword)
-        history.insert(0, keyword)
-        session['search_history'] = history[:10]
-
-    results = []
-    if keyword:
-        results = search_tomato_books(keyword, page=page, size=size)
-        existing_titles = set(novel.title for novel in Novel.query.all())
-        for book in results:
-            book['is_added'] = book['title'] in existing_titles
-
-    return render_template('search.html',
-                           keyword=keyword,
-                           results=results,
-                           page=page,
-                           size=size)
-
-
-# ===== 从番茄小说添加到书单 =====
-@app.route('/add_from_tomato', methods=['POST'])
-def add_from_tomato():
+# ===== 从番茄小说添加到书单（AJAX） =====
+@app.route('/add_from_tomato_ajax', methods=['POST'])
+def add_from_tomato_ajax():
     book_id = request.form.get('book_id')
     title = request.form.get('title')
     keyword = request.form.get('keyword', title)
     list_type = request.form.get('list_type', 'read')
 
     if not book_id or not title:
-        return redirect(url_for('search'))
+        return jsonify({'success': False, 'message': '参数错误'})
 
     existing = Novel.query.filter_by(title=title).first()
 
@@ -789,18 +713,8 @@ def add_from_tomato():
             existing.want_to_read = False
             list_name = "已读推荐"
         db.session.commit()
-
-        results = search_tomato_books(keyword)
-        existing_titles = set(novel.title for novel in Novel.query.all())
-        for book in results:
-            book['is_added'] = book['title'] in existing_titles
-
-        return render_template('search.html',
-                               keyword=keyword,
-                               results=results,
-                               page=1,
-                               size=30,
-                               message=f"✅ 已将《{existing.title}》切换到「{list_name}」！")
+        cache.clear()
+        return jsonify({'success': True, 'message': f'✅ 已将《{title}》切换到「{list_name}」'})
 
     results = search_tomato_books(keyword)
     book_data = None
@@ -810,7 +724,7 @@ def add_from_tomato():
             break
 
     if not book_data:
-        return "未找到该书籍", 404
+        return jsonify({'success': False, 'message': '未找到该书籍'})
 
     raw_category = book_data.get('category', '')
     gender = book_data.get('gender', 1)
@@ -845,21 +759,108 @@ def add_from_tomato():
 
     db.session.add(novel)
     db.session.commit()
+    cache.clear()
 
-    # 下载封面
-    if novel.cover:
-        download_cover_to_local(novel.cover)
+    return jsonify({'success': True, 'message': f'✅ 已成功添加《{title}》到「{list_name}」'})
 
-    existing_titles = set(novel.title for novel in Novel.query.all())
-    for book in results:
-        book['is_added'] = book['title'] in existing_titles
+
+# ===== 搜索番茄小说 =====
+@app.route('/search')
+def search():
+    keyword = request.args.get('q', '').strip()
+    page = request.args.get('page', 1, type=int)
+    size = request.args.get('size', 30, type=int)
+
+    if keyword:
+        history = session.get('search_history', [])
+        if keyword in history:
+            history.remove(keyword)
+        history.insert(0, keyword)
+        session['search_history'] = history[:10]
+
+    results = []
+    if keyword:
+        results = search_tomato_books(keyword, page=page, size=size)
+        existing_titles = set(novel.title for novel in Novel.query.all())
+        for book in results:
+            book['is_added'] = book['title'] in existing_titles
 
     return render_template('search.html',
                            keyword=keyword,
                            results=results,
-                           page=1,
-                           size=30,
-                           message=f"✅ 已成功添加《{book_data['title']}》到「{list_name}」！")
+                           page=page,
+                           size=size)
+
+
+# ===== 从番茄小说添加到书单（表单提交，保留兼容） =====
+@app.route('/add_from_tomato', methods=['POST'])
+def add_from_tomato():
+    book_id = request.form.get('book_id')
+    title = request.form.get('title')
+    keyword = request.form.get('keyword', title)
+    list_type = request.form.get('list_type', 'read')
+
+    if not book_id or not title:
+        return redirect(url_for('search'))
+
+    existing = Novel.query.filter_by(title=title).first()
+
+    if existing:
+        if list_type == 'want':
+            existing.want_to_read = True
+            list_name = "想看"
+        else:
+            existing.want_to_read = False
+            list_name = "已读推荐"
+        db.session.commit()
+        cache.clear()
+        return redirect(url_for('search', q=keyword))
+
+    results = search_tomato_books(keyword)
+    book_data = None
+    for item in results:
+        if item['book_id'] == book_id:
+            book_data = item
+            break
+
+    if not book_data:
+        return "未找到该书籍", 404
+
+    raw_category = book_data.get('category', '')
+    gender = book_data.get('gender', 1)
+    category_name = get_category_name(raw_category, gender)
+
+    want_to_read = True if list_type == 'want' else False
+
+    rating_history = json.dumps([{
+        'date': datetime.now().strftime('%Y-%m-%d'),
+        'rating': book_data['score']
+    }])
+
+    novel = Novel(
+        title=book_data['title'],
+        author=book_data['author'],
+        category=category_name,
+        cover=book_data['cover'],
+        summary=book_data['abstract'],
+        rating=book_data['score'],
+        recommendation="",
+        platform="番茄小说",
+        read_date="",
+        book_id=book_data['book_id'],
+        word_count=book_data.get('word_count', ''),
+        chapter_count=book_data.get('chapter_count', ''),
+        status=book_data.get('status', '连载中'),
+        read_count=book_data.get('read_count', ''),
+        want_to_read=want_to_read,
+        rating_history=rating_history
+    )
+
+    db.session.add(novel)
+    db.session.commit()
+    cache.clear()
+
+    return redirect(url_for('search', q=keyword))
 
 
 if __name__ == '__main__':

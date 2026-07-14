@@ -1,9 +1,43 @@
+# 虚拟环境
 .venv/
 venv/
+env/
+
+# Python 缓存
 __pycache__/
-instance/
 *.pyc
+*.pyo
+*.pyd
+
+# 数据库
 *.db
-.env
+*.sqlite
+instance/
+
+# 日志
 logs/
+*.log
+
+# 环境变量
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# 封面图片（不提交到 GitHub）
 static/covers/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.heic
+
+# 其他
+.DS_Store
+Thumbs.db
+*.exe
+config.yml
