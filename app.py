@@ -439,6 +439,85 @@ def category_filter(category_name):
                            want_count=want_count)
 
 
+# ===== 仪表盘 =====
+@app.route('/dashboard')
+@cache.cached(timeout=300)
+def dashboard():
+    """阅读统计仪表盘"""
+    novels = Novel.query.all()
+
+    # 基本统计
+    total = len(novels)
+    read_count = Novel.query.filter_by(want_to_read=False).count()
+    want_count = Novel.query.filter_by(want_to_read=True).count()
+
+    # 平均评分（已读的）
+    read_books = [n for n in novels if not n.want_to_read and n.rating]
+    avg_rating = round(sum(n.rating for n in read_books) / len(read_books), 1) if read_books else 0
+
+    # 分类统计
+    category_data = {}
+    for novel in novels:
+        if novel.category:
+            category_data[novel.category] = category_data.get(novel.category, 0) + 1
+
+    # 评分分布统计
+    rating_dist = {'0-5': 0, '5-6': 0, '6-7': 0, '7-8': 0, '8-9': 0, '9-10': 0}
+    for novel in read_books:
+        r = novel.rating or 0
+        if r < 5:
+            rating_dist['0-5'] += 1
+        elif r < 6:
+            rating_dist['5-6'] += 1
+        elif r < 7:
+            rating_dist['6-7'] += 1
+        elif r < 8:
+            rating_dist['7-8'] += 1
+        elif r < 9:
+            rating_dist['8-9'] += 1
+        else:
+            rating_dist['9-10'] += 1
+
+    # 最新添加的5本书
+    recent_books = sorted(novels, key=lambda x: x.id, reverse=True)[:5]
+
+    return render_template('dashboard.html',
+                           total=total,
+                           read_count=read_count,
+                           want_count=want_count,
+                           avg_rating=avg_rating,
+                           category_data=category_data,
+                           rating_dist=rating_dist,
+                           recent_books=recent_books,
+                           novels=novels)
+
+
+# ===== 评分趋势 API =====
+@app.route('/api/rating_trend/<int:novel_id>')
+def rating_trend_api(novel_id):
+    """获取单本书的评分趋势数据"""
+    novel = Novel.query.get_or_404(novel_id)
+    history = json.loads(novel.rating_history) if novel.rating_history else []
+
+    if len(history) < 2:
+        return jsonify({
+            'labels': [],
+            'data': [],
+            'title': novel.title,
+            'message': '暂无足够评分数据'
+        })
+
+    labels = [h['date'] for h in history]
+    data = [h['rating'] for h in history]
+
+    return jsonify({
+        'labels': labels,
+        'data': data,
+        'title': novel.title,
+        'current_rating': novel.rating
+    })
+
+
 # ===== 随机跳转 =====
 @app.route('/random')
 def random_book():
