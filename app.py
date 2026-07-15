@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, send_file, abort, jsonify, Response, session
 from flask_caching import Cache
 from models import db, Novel
+from config import Config
 import requests
 import io
 import os
@@ -8,34 +9,64 @@ import hashlib
 import random
 import json
 from datetime import datetime, date
+import logging
+from logging.handlers import RotatingFileHandler
 
+# ===== 环境配置 =====
+env = os.environ.get('FLASK_ENV', 'development')
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here-change-in-production'
+app.config.from_object(Config)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///novels.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db.init_app(app)
+
+# ===== 日志配置 =====
+def setup_logging():
+    """配置日志系统"""
+    log_dir = 'logs'
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    # 创建日志格式
+    formatter = logging.Formatter(
+        '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+    # 文件日志（按大小轮转，最大10MB，保留5个备份）
+    file_handler = RotatingFileHandler(
+        os.path.join(log_dir, 'app.log'),
+        maxBytes=10 * 1024 * 1024,
+        backupCount=5
+    )
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+
+    # 控制台日志
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
+    console_handler.setFormatter(formatter)
+
+    # 应用日志
+    app.logger.addHandler(file_handler)
+    app.logger.addHandler(console_handler)
+    app.logger.setLevel(logging.INFO)
+
+    app.logger.info('===== 应用启动 =====')
+    app.logger.info(f'环境: {env}')
+    app.logger.info(f'数据库: {app.config.get("SQLALCHEMY_DATABASE_URI")}')
+
+
+setup_logging()
 
 # ===== 缓存配置 =====
-cache = Cache(app, config={'CACHE_TYPE': 'simple'})
+cache = Cache(app, config={'CACHE_TYPE': app.config.get('CACHE_TYPE', 'simple')})
 
-# ===== 分类颜色配置 =====
-CATEGORY_COLORS = {
-    '男频·都市': '#4A90D9',
-    '男频·玄幻': '#9B59B6',
-    '男频·仙侠': '#1ABC9C',
-    '男频·科幻': '#3498DB',
-    '男频·悬疑': '#2C3E50',
-    '男频·衍生': '#E67E22',
-    '男频·二次元': '#E91E63',
-    '女频·现代言情': '#FF6B81',
-    '女频·古风言情': '#E74C3C',
-    '女频·玄幻言情': '#9B59B6',
-    '女频·古代言情': '#C0392B',
-    '女频·衍生': '#E67E22',
-    '女频·都市言情': '#FF6B81',
-    '未分类': '#95A5A6',
-}
+# ===== 分类颜色配置（从 config 读取） =====
+CATEGORY_COLORS = app.config.get('CATEGORY_COLORS', {})
+
+# ===== 番茄小说 API 配置 =====
+TOMATO_API_BASE = app.config.get('TOMATO_API_BASE', 'http://127.0.0.1:18423')
+
+db.init_app(app)
 
 
 # ===== 自定义过滤器 =====
@@ -81,11 +112,13 @@ def download_cover_to_local(url):
 # ===== 错误处理 =====
 @app.errorhandler(404)
 def page_not_found(e):
+    app.logger.warning(f'404错误: {request.path}')
     return render_template('404.html'), 404
 
 
 @app.errorhandler(500)
 def internal_error(e):
+    app.logger.error(f'500错误: {e}')
     db.session.rollback()
     return render_template('500.html'), 500
 
@@ -103,6 +136,7 @@ def add_header(response):
 # ===== 导出书单 =====
 @app.route('/export')
 def export_data():
+    app.logger.info('导出书单')
     novels = Novel.query.all()
     data = []
     for n in novels:
@@ -140,11 +174,13 @@ def import_data():
     if request.method == 'POST':
         file = request.files.get('file')
         if not file:
+            app.logger.warning('导入失败: 未选择文件')
             return "请选择文件", 400
 
         try:
             data = json.load(file)
             count = 0
+            app.logger.info(f'开始导入书单，共 {len(data)} 本书')
 
             for item in data:
                 existing = Novel.query.filter_by(title=item.get('title')).first()
@@ -172,8 +208,10 @@ def import_data():
                     count += 1
             db.session.commit()
             cache.clear()
+            app.logger.info(f'导入成功: {count} 本书')
             return render_template('import.html', success=True, count=count)
         except Exception as e:
+            app.logger.error(f'导入失败: {e}')
             return f"导入失败: {e}", 500
 
     return render_template('import.html', success=False)
@@ -186,6 +224,7 @@ def update_progress(novel_id):
     progress = request.form.get('progress', 0, type=int)
     novel.progress = progress
     db.session.commit()
+    app.logger.info(f'更新阅读进度: {novel.title} -> {progress}章')
     return redirect(url_for('detail', novel_id=novel.id))
 
 
@@ -193,6 +232,7 @@ def update_progress(novel_id):
 @app.route('/clear_history')
 def clear_history():
     session.pop('search_history', None)
+    app.logger.info('清空搜索历史')
     return redirect(url_for('search'))
 
 
@@ -207,17 +247,14 @@ def refresh_today():
     random.seed()
     today_recommendation = random.choice(novels)
     session['custom_today'] = today_recommendation.id
+    app.logger.info(f'换一换今日推荐: {today_recommendation.title}')
 
     return redirect(referer)
 
 
-# ===== 番茄小说 API 配置 =====
-TOMATO_API_BASE = "http://127.0.0.1:18423"
-
-
 # ===== 自动分类映射 =====
 def get_category_name(raw_category, gender):
-    male_categories = {
+    MALE_CATEGORIES = {
         '都市': '都市', '玄幻': '玄幻', '仙侠': '仙侠', '历史': '历史',
         '军事': '军事', '科幻': '科幻', '悬疑': '悬疑', '灵异': '灵异',
         '游戏': '游戏', '体育': '体育', '同人': '同人', '衍生': '衍生',
@@ -229,7 +266,7 @@ def get_category_name(raw_category, gender):
         '冒险': '冒险',
     }
 
-    female_categories = {
+    FEMALE_CATEGORIES = {
         '现代言情': '现代言情', '古风言情': '古风言情',
         '玄幻言情': '玄幻言情', '仙侠言情': '仙侠言情',
         '古代言情': '古代言情', '青春校园': '青春校园',
@@ -242,10 +279,10 @@ def get_category_name(raw_category, gender):
     }
 
     if int(gender) == 1:
-        mapping = male_categories
+        mapping = MALE_CATEGORIES
         prefix = '男频·'
     else:
-        mapping = female_categories
+        mapping = FEMALE_CATEGORIES
         prefix = '女频·'
 
     if raw_category in mapping:
@@ -297,7 +334,7 @@ def search_tomato_books(keyword, page=1, size=30):
         else:
             return []
     except Exception as e:
-        print(f"搜索异常: {e}")
+        app.logger.error(f'搜索异常: {e}')
         return []
 
 
@@ -313,6 +350,8 @@ def index():
     sort = request.args.get('sort', 'latest')
     rating_filter = request.args.get('rating', 'all')
     list_type = request.args.get('list', 'read')
+
+    app.logger.info(f'首页访问 - list:{list_type}, sort:{sort}, rating:{rating_filter}')
 
     if list_type == 'want':
         novels = Novel.query.filter_by(want_to_read=True).all()
@@ -389,6 +428,8 @@ def category_filter(category_name):
     rating_filter = request.args.get('rating', 'all')
     list_type = request.args.get('list', 'read')
 
+    app.logger.info(f'分类筛选 - category:{category_name}, list:{list_type}')
+
     if category_name == '全部':
         if list_type == 'want':
             novels = Novel.query.filter_by(want_to_read=True).all()
@@ -454,6 +495,7 @@ def category_filter(category_name):
 @app.route('/dashboard')
 @cache.cached(timeout=300)
 def dashboard():
+    app.logger.info('仪表盘访问')
     novels = Novel.query.all()
 
     total = len(novels)
@@ -529,6 +571,7 @@ def random_book():
     if not books:
         return redirect(url_for('index'))
     book = random.choice(books)
+    app.logger.info(f'随机跳转: {book.title}')
     return redirect(url_for('detail', novel_id=book.id))
 
 
@@ -557,6 +600,7 @@ def toggle_featured(novel_id):
     novel.featured = not novel.featured
     db.session.commit()
     cache.clear()
+    app.logger.info(f'切换轮播: {novel.title} -> {novel.featured}')
     referer = request.headers.get('Referer', '/')
     return redirect(referer)
 
@@ -568,6 +612,7 @@ def toggle_want(novel_id):
     novel.want_to_read = not novel.want_to_read
     db.session.commit()
     cache.clear()
+    app.logger.info(f'切换状态: {novel.title} -> want_to_read:{novel.want_to_read}')
     referer = request.headers.get('Referer', '/')
     return redirect(referer)
 
@@ -576,11 +621,13 @@ def toggle_want(novel_id):
 @app.route('/remove_book/<int:novel_id>', methods=['POST'])
 def remove_book(novel_id):
     novel = Novel.query.get_or_404(novel_id)
+    title = novel.title
     if novel.featured:
         novel.featured = False
     db.session.delete(novel)
     db.session.commit()
     cache.clear()
+    app.logger.info(f'删除书籍: {title}')
     referer = request.headers.get('Referer', '/')
     return redirect(referer)
 
@@ -593,6 +640,7 @@ def edit_recommendation(novel_id):
         recommendation = request.form.get('recommendation', '').strip()
         novel.recommendation = recommendation
         db.session.commit()
+        app.logger.info(f'更新推荐语: {novel.title}')
         return redirect(url_for('detail', novel_id=novel.id))
     return render_template('edit_recommendation.html', novel=novel)
 
@@ -610,29 +658,28 @@ def get_cover():
     """获取封面图片，直接返回番茄图片"""
     url = request.args.get('url')
     if not url:
+        app.logger.warning('封面请求: 缺少url参数')
         return '', 400
 
     try:
-        # 直接请求番茄的图片
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Referer": "https://fanqienovel.com/",
         }
         response = requests.get(url, headers=headers, timeout=10)
 
-        # 如果番茄返回成功，直接返回图片
         if response.status_code == 200:
+            app.logger.info(f'封面获取成功: {url[:60]}...')
             return send_file(
                 io.BytesIO(response.content),
                 mimetype=response.headers.get('Content-Type', 'image/jpeg')
             )
         else:
-            # 如果番茄返回失败，返回默认封面
+            app.logger.warning(f'封面获取失败: {response.status_code}')
             default = "https://img3.doubanio.com/f/shire/5522dd1f5b742d1b3ce3f0e1c1b7f1a8c0f2e3e8.jpg"
             return redirect(default)
     except Exception as e:
-        print(f"封面获取错误: {e}")
-        # 异常时返回默认封面
+        app.logger.error(f'封面获取错误: {e}')
         default = "https://img3.doubanio.com/f/shire/5522dd1f5b742d1b3ce3f0e1c1b7f1a8c0f2e3e8.jpg"
         return redirect(default)
 
@@ -640,6 +687,7 @@ def get_cover():
 # ===== 更新评分 =====
 @app.route('/update_ratings')
 def update_ratings():
+    app.logger.info('开始更新评分')
     novels = Novel.query.all()
     updated = 0
     for novel in novels:
@@ -659,6 +707,7 @@ def update_ratings():
                         updated += 1
                     break
     db.session.commit()
+    app.logger.info(f'评分更新完成: {updated} 本书')
     return f"更新完成，{updated} 本书评分已更新"
 
 
@@ -669,6 +718,8 @@ def add_from_tomato_ajax():
     title = request.form.get('title')
     keyword = request.form.get('keyword', title)
     list_type = request.form.get('list_type', 'read')
+
+    app.logger.info(f'AJAX添加书籍: {title}, list:{list_type}')
 
     if not book_id or not title:
         return jsonify({'success': False, 'message': '参数错误'})
@@ -684,6 +735,7 @@ def add_from_tomato_ajax():
             list_name = "已读推荐"
         db.session.commit()
         cache.clear()
+        app.logger.info(f'切换状态: {title} -> {list_name}')
         return jsonify({'success': True, 'message': f'✅ 已将《{title}》切换到「{list_name}」'})
 
     results = search_tomato_books(keyword)
@@ -694,6 +746,7 @@ def add_from_tomato_ajax():
             break
 
     if not book_data:
+        app.logger.warning(f'未找到书籍: {title}')
         return jsonify({'success': False, 'message': '未找到该书籍'})
 
     raw_category = book_data.get('category', '')
@@ -730,6 +783,7 @@ def add_from_tomato_ajax():
     db.session.add(novel)
     db.session.commit()
     cache.clear()
+    app.logger.info(f'添加成功: {title} -> {list_name}')
 
     return jsonify({'success': True, 'message': f'✅ 已成功添加《{title}》到「{list_name}」'})
 
@@ -747,6 +801,7 @@ def search():
             history.remove(keyword)
         history.insert(0, keyword)
         session['search_history'] = history[:10]
+        app.logger.info(f'搜索: {keyword}')
 
     results = []
     if keyword:
@@ -770,6 +825,8 @@ def add_from_tomato():
     keyword = request.form.get('keyword', title)
     list_type = request.form.get('list_type', 'read')
 
+    app.logger.info(f'表单添加书籍: {title}, list:{list_type}')
+
     if not book_id or not title:
         return redirect(url_for('search'))
 
@@ -784,6 +841,7 @@ def add_from_tomato():
             list_name = "已读推荐"
         db.session.commit()
         cache.clear()
+        app.logger.info(f'切换状态: {title} -> {list_name}')
         return redirect(url_for('search', q=keyword))
 
     results = search_tomato_books(keyword)
@@ -794,6 +852,7 @@ def add_from_tomato():
             break
 
     if not book_data:
+        app.logger.warning(f'未找到书籍: {title}')
         return "未找到该书籍", 404
 
     raw_category = book_data.get('category', '')
@@ -829,6 +888,7 @@ def add_from_tomato():
     db.session.add(novel)
     db.session.commit()
     cache.clear()
+    app.logger.info(f'添加成功: {title}')
 
     return redirect(url_for('search', q=keyword))
 
