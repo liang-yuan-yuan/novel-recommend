@@ -6,10 +6,9 @@
 <div class="row">
     <!-- 左侧：封面图 -->
     <div class="col-md-4">
-        <img src="{{ url_for('get_cover', url=novel.cover) }}"
+        <img src="https://images.weserv.nl/?url={{ novel.cover | urlencode }}&cache=on&w=600"
              class="img-fluid rounded shadow"
-             alt="{{ novel.title }}"
-             decoding="async">
+             alt="{{ novel.title }}">
     </div>
 
     <!-- 右侧：书籍信息 -->

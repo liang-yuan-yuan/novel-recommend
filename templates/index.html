@@ -19,8 +19,7 @@
         {% for novel in featured_novels %}
         <div class="carousel-item {{ 'active' if loop.first else '' }}">
             <div class="position-relative" style="height: 50vh; min-height: 300px; max-height: 500px; overflow: hidden; background: #1a1a2e;">
-                <!-- ✅ 修改为本地代理 -->
-                <img src="{{ url_for('get_cover', url=novel.cover) }}"
+                <img src="https://images.weserv.nl/?url={{ novel.cover | urlencode }}&cache=on&w=400"
                      class="d-block w-100"
                      style="height: 100%; object-fit: cover; filter: blur(12px) brightness(0.5); transform: scale(1.05);"
                      loading="lazy"
@@ -30,8 +29,7 @@
                      style="width: 90%; max-width: 850px;">
                     <div class="row g-4 w-100 align-items-center">
                         <div class="col-md-4 text-center">
-                            <!-- ✅ 修改为本地代理 -->
-                            <img src="{{ url_for('get_cover', url=novel.cover) }}"
+                            <img src="https://images.weserv.nl/?url={{ novel.cover | urlencode }}&cache=on&w=400"
                                  class="img-fluid rounded-3 shadow-lg"
                                  style="max-height: 280px; width: auto; object-fit: cover;"
                                  loading="lazy"
@@ -343,8 +341,7 @@
         {% for novel in novels %}
         <div class="col">
             <div class="card h-100 shadow-sm hover-card d-flex flex-column" style="border-radius: 8px;">
-                <!-- ✅ 修改为本地代理 -->
-                <img src="{{ url_for('get_cover', url=novel.cover) }}"
+                <img src="https://images.weserv.nl/?url={{ novel.cover | urlencode }}&cache=on&w=400"
                      class="card-img-top"
                      alt="{{ novel.title }}"
                      loading="lazy"
@@ -397,7 +394,7 @@
 
                     <p class="card-text text-muted" style="font-size: clamp(0.5rem, 0.8vw, 0.65rem); flex-grow: 1; margin-bottom: 0.3rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{{ novel.summary[:30] }}...</p>
 
-                    <!-- 按钮区域 - 统一尺寸 -->
+                    <!-- 按钮区域 -->
                     <div class="mt-auto d-flex gap-1 flex-wrap justify-content-center">
                         <a href="{{ url_for('toggle_featured', novel_id=novel.id) }}"
                            class="btn btn-sm {{ 'btn-warning' if novel.featured else 'btn-outline-secondary' }}"

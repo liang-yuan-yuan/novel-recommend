@@ -607,31 +607,32 @@ def detail(novel_id):
 # ===== 下载并保存封面到本地 =====
 @app.route('/cover')
 def get_cover():
+    """获取封面图片，直接返回番茄图片"""
     url = request.args.get('url')
     if not url:
-        abort(400)
+        return '', 400
 
     try:
-        # 用更精简的请求头，不发送 Referer
+        # 直接请求番茄的图片
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
-            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://fanqienovel.com/",
         }
-        # 注意：不设置 Referer
         response = requests.get(url, headers=headers, timeout=10)
 
+        # 如果番茄返回成功，直接返回图片
         if response.status_code == 200:
             return send_file(
                 io.BytesIO(response.content),
                 mimetype=response.headers.get('Content-Type', 'image/jpeg')
             )
         else:
-            # 如果还是失败，返回默认封面
+            # 如果番茄返回失败，返回默认封面
             default = "https://img3.doubanio.com/f/shire/5522dd1f5b742d1b3ce3f0e1c1b7f1a8c0f2e3e8.jpg"
             return redirect(default)
     except Exception as e:
         print(f"封面获取错误: {e}")
+        # 异常时返回默认封面
         default = "https://img3.doubanio.com/f/shire/5522dd1f5b742d1b3ce3f0e1c1b7f1a8c0f2e3e8.jpg"
         return redirect(default)
 
