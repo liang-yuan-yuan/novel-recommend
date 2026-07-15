@@ -28,29 +28,6 @@
         color: white !important;
         border: none !important;
     }
-
-    /* Toast 提示 */
-    .custom-toast {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-        padding: 12px 24px;
-        border-radius: 8px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-        max-width: 400px;
-        animation: slideDown 0.3s ease;
-    }
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
 </style>
 {% endblock %}
 
@@ -307,9 +284,10 @@ document.querySelectorAll('.add-book-btn').forEach(function(btn) {
                     badge.style.display = 'inline';
                 }
                 btn.outerHTML = '<button class="btn btn-secondary btn-sm" disabled><i class="bi bi-check-circle"></i> 已在书单中</button>';
-                // 显示成功提示
+                // ✅ 使用 base.html 中的 showToast
                 showToast(data.message, 'success');
             } else {
+                // ✅ 使用 base.html 中的 showToast
                 showToast(data.message, 'warning');
                 btn.disabled = false;
                 btn.innerHTML = '<i class="bi bi-check-circle"></i> ' + (listType === 'read' ? '已读推荐' : '想看');
@@ -317,32 +295,12 @@ document.querySelectorAll('.add-book-btn').forEach(function(btn) {
         })
         .catch(error => {
             console.error('Error:', error);
+            // ✅ 使用 base.html 中的 showToast
             showToast('添加失败，请重试', 'danger');
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-check-circle"></i> ' + (listType === 'read' ? '已读推荐' : '想看');
         });
     });
 });
-
-// ===== Toast 提示 =====
-function showToast(message, type) {
-    const existing = document.querySelector('.custom-toast');
-    if (existing) existing.remove();
-
-    const toast = document.createElement('div');
-    toast.className = `custom-toast alert alert-${type} alert-dismissible fade show`;
-    toast.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    `;
-    document.body.appendChild(toast);
-
-    // 3秒后自动消失
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
 </script>
 {% endblock %}
