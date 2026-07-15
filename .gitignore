@@ -27,15 +27,6 @@ logs/
 .vscode/
 *.iml
 
-# 封面图片（不提交到 GitHub）
-static/covers/
-*.jpg
-*.jpeg
-*.png
-*.gif
-*.webp
-*.heic
-
 # 其他
 .DS_Store
 Thumbs.db
